@@ -120,6 +120,7 @@ for image in imagelist:
     
     endtime = time.time()
     timedelta = endtime - starttime
+    metrics.write(timedelta + '\n')
     
     cv2.imwrite('results/{}/'.format(os.path.basename(filtername)) + os.path.splitext(os.path.basename(image))[0] + '.png', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
 
@@ -151,7 +152,7 @@ for image in imagelist:
 # print(all_psnr, all_ssim, all_timings)
 # metrics.write(str(all_psnr) + '\n')
 # metrics.write(str(all_ssim) + '\n')
-metrics.write(str(all_timings) + '\n')
+# metrics.write(str(all_timings) + '\n')
 
 print('\r', end='')
 print(' ' * 60, end='')
