@@ -1,0 +1,10 @@
+train/*
+test/*
+results/*
+__pycache__
+*.p
+
+# Except these files...
+!train/README.md
+!test/README.md
+!results/README.md
