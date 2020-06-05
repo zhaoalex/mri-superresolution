@@ -7,7 +7,8 @@ import torch.backends.cudnn as cudnn
 
 from SRCNN.model import Net
 from progress_bar import progress_bar
-
+from numpy import argmax
+from shutil import copyfile
 
 class SRCNNTrainer(object):
     def __init__(self, config, training_loader, testing_loader):
@@ -25,9 +26,17 @@ class SRCNNTrainer(object):
         self.training_loader = training_loader
         self.testing_loader = testing_loader
 
+        self.load = config.load
+        self.model_path = 'models/SRCNN/' + str(self.upscale_factor)
+
     def build_model(self):
-        self.model = Net(num_channels=1, base_filter=64, upscale_factor=self.upscale_factor).to(self.device)
-        self.model.weight_init(mean=0.0, std=0.01)
+        if self.load:
+            self.model = torch.load(self.model_path + '/' + self.load)
+            print('===> Model loaded')
+        else:
+            self.model = Net(num_channels=1, base_filter=64, upscale_factor=self.upscale_factor).to(self.device)
+            self.model.weight_init(mean=0.0, std=0.01)
+        
         self.criterion = torch.nn.MSELoss()
         torch.manual_seed(self.seed)
 
@@ -39,8 +48,8 @@ class SRCNNTrainer(object):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[50, 75, 100], gamma=0.5)
 
-    def save_model(self):
-        model_out_path = "model_path.pth"
+    def save_model(self, epoch):
+        model_out_path = self.model_path + "/model_{}.pth".format(epoch)
         torch.save(self.model, model_out_path)
         print("Checkpoint saved to {}".format(model_out_path))
 
@@ -72,13 +81,20 @@ class SRCNNTrainer(object):
                 progress_bar(batch_num, len(self.testing_loader), 'PSNR: %.4f' % (avg_psnr / (batch_num + 1)))
 
         print("    Average PSNR: {:.4f} dB".format(avg_psnr / len(self.testing_loader)))
+        return avg_psnr / len(self.testing_loader)
 
     def run(self):
         self.build_model()
+        all_epoch_psnrs = []
         for epoch in range(1, self.nEpochs + 1):
             print("\n===> Epoch {} starts:".format(epoch))
             self.train()
-            self.test()
-            self.scheduler.step(epoch)
-            if epoch == self.nEpochs:
-                self.save_model()
+            epoch_psnr = self.test()
+            all_epoch_psnrs.append(epoch_psnr)
+            self.scheduler.step()
+            # if epoch == self.nEpochs:
+            self.save_model(epoch) # save model every 5 epochs
+        
+        best_epoch = argmax(all_epoch_psnrs) + 1
+        print("Best epoch: model_{} with PSNR {}".format(best_epoch, all_epoch_psnrs[best_epoch - 1]))
+        copyfile(self.model_path + "/model_{}.pth".format(best_epoch), self.model_path + "/best_model.pth")

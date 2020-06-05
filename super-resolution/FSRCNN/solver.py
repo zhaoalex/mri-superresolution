@@ -8,6 +8,7 @@ from FSRCNN.model import Net
 from progress_bar import progress_bar
 from numpy import argmax
 from shutil import copyfile
+from os import makedirs
 
 
 class FSRCNNTrainer(object):
@@ -27,10 +28,13 @@ class FSRCNNTrainer(object):
         self.testing_loader = testing_loader
 
         self.load = config.load
+        self.model_path = 'models/FSRCNN/' + str(self.upscale_factor)
+
+        makedirs(self.model_path, exist_ok=True)
 
     def build_model(self):
-        if self.load and exists("model_path.pth"):
-            self.model = torch.load("model_path.pth")
+        if self.load:
+            self.model = torch.load(self.model_path + '/' + self.load)
             print('===> Model loaded')
         else:
             print('===> Init new network')
@@ -50,7 +54,7 @@ class FSRCNNTrainer(object):
         self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[50, 75, 100], gamma=0.5)  # lr decay
 
     def save_model(self, epoch):
-        model_out_path = "models/FSRCNN/model_{}.pth".format(epoch)
+        model_out_path = self.model_path + "/model_{}.pth".format(epoch)
         torch.save(self.model, model_out_path)
         print("Checkpoint saved to {}".format(model_out_path))
 
@@ -98,5 +102,5 @@ class FSRCNNTrainer(object):
         
         best_epoch = argmax(all_epoch_psnrs) + 1
         print("Best epoch: model_{} with PSNR {}".format(best_epoch, all_epoch_psnrs[best_epoch - 1]))
-        copyfile("models/FSRCNN/model_{}.pth".format(best_epoch), "models/FSRCNN/best_model.pth")
-                
+        copyfile(self.model_path + "/model_{}.pth".format(best_epoch), self.model_path + "/best_model.pth")
+

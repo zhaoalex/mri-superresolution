@@ -27,9 +27,9 @@ parser.add_argument('--seed', type=int, default=123, help='random seed to use. D
 
 
 # model configuration
-parser.add_argument('--upscale_factor', '-uf',  type=int, default=4, help="super resolution upscale factor")
+parser.add_argument('--upscale_factor', '-uf',  type=int, default=2, help="super resolution upscale factor")
 parser.add_argument('--model', '-m', type=str, default='fsrcnn', help='choose which model is going to use')
-parser.add_argument('--load', type=bool, default=True, help='loaded trained model or train from scratch')
+parser.add_argument('--load', type=str, help='loaded trained model or train from scratch')
 
 args = parser.parse_args()
 

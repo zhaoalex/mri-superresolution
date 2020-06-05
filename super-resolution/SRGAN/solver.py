@@ -8,7 +8,8 @@ import torch.backends.cudnn as cudnn
 from torchvision.models.vgg import vgg16
 from SRGAN.model import Generator, Discriminator
 from progress_bar import progress_bar
-
+from numpy import argmax
+from shutil import copyfile
 
 class SRGANTrainer(object):
     def __init__(self, config, training_loader, testing_loader):
@@ -31,6 +32,9 @@ class SRGANTrainer(object):
         self.num_residuals = 16
         self.training_loader = training_loader
         self.testing_loader = testing_loader
+
+        self.load = config.load
+        self.model_path = 'models/SRGAN/' + str(self.upscale_factor)
 
     def build_model(self):
         self.netG = Generator(n_residual_blocks=self.num_residuals, upsample_factor=self.upscale_factor, base_filter=64, num_channel=1).to(self.device)
@@ -60,9 +64,9 @@ class SRGANTrainer(object):
             x = x.cpu()
         return x.data
 
-    def save(self):
-        g_model_out_path = "SRGAN_Generator_model_path.pth"
-        d_model_out_path = "SRGAN_Discriminator_model_path.pth"
+    def save(self, epoch):
+        g_model_out_path = self.model_path + "/g_model_{}.pth".format(epoch)
+        d_model_out_path = self.model_path + "/d_model_{}.pth".format(epoch)
         torch.save(self.netG, g_model_out_path)
         torch.save(self.netD, d_model_out_path)
         print("Checkpoint saved to {}".format(g_model_out_path))
@@ -131,9 +135,11 @@ class SRGANTrainer(object):
                 progress_bar(batch_num, len(self.testing_loader), 'PSNR: %.4f' % (avg_psnr / (batch_num + 1)))
 
         print("    Average PSNR: {:.4f} dB".format(avg_psnr / len(self.testing_loader)))
+        return avg_psnr / len(self.testing_loader)
 
     def run(self):
         self.build_model()
+        all_epoch_psnrs = []
         for epoch in range(1, self.epoch_pretrain + 1):
             self.pretrain()
             print("{}/{} pretrained".format(epoch, self.epoch_pretrain))
@@ -141,7 +147,12 @@ class SRGANTrainer(object):
         for epoch in range(1, self.nEpochs + 1):
             print("\n===> Epoch {} starts:".format(epoch))
             self.train()
-            self.test()
-            self.scheduler.step(epoch)
-            if epoch == self.nEpochs:
-                self.save()
+            epoch_psnr = self.test()
+            all_epoch_psnrs.append(epoch_psnr)
+            self.scheduler.step()
+            # if epoch == self.nEpochs:
+            self.save_model(epoch)
+        
+        best_epoch = argmax(all_epoch_psnrs) + 1
+        print("Best epoch: model_{} with PSNR {}".format(best_epoch, all_epoch_psnrs[best_epoch - 1]))
+        copyfile(self.model_path + "/model_{}.pth".format(best_epoch), self.model_path + "/best_model.pth")

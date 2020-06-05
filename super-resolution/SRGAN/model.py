@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 def swish(x):
-    return x * F.sigmoid(x)
+    return x * torch.sigmoid(x)
 
 
 class ResidualBlock(nn.Module):
