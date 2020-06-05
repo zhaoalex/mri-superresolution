@@ -4,14 +4,9 @@ import argparse
 
 from torch.utils.data import DataLoader
 
-from DBPN.solver import DBPNTrainer
-from DRCN.solver import DRCNTrainer
-from EDSR.solver import EDSRTrainer
 from FSRCNN.solver import FSRCNNTrainer
 from SRCNN.solver import SRCNNTrainer
 from SRGAN.solver import SRGANTrainer
-from SubPixelCNN.solver import SubPixelTrainer
-from VDSR.solver import VDSRTrainer
 from dataset.data import get_training_set, get_test_set
 
 # ===========================================================
@@ -44,22 +39,12 @@ def main():
     training_data_loader = DataLoader(dataset=train_set, batch_size=args.batchSize, shuffle=True)
     testing_data_loader = DataLoader(dataset=test_set, batch_size=args.testBatchSize, shuffle=False)
 
-    if args.model == 'sub':
-        model = SubPixelTrainer(args, training_data_loader, testing_data_loader)
-    elif args.model == 'srcnn':
+    if args.model == 'srcnn':
         model = SRCNNTrainer(args, training_data_loader, testing_data_loader)
-    elif args.model == 'vdsr':
-        model = VDSRTrainer(args, training_data_loader, testing_data_loader)
-    elif args.model == 'edsr':
-        model = EDSRTrainer(args, training_data_loader, testing_data_loader)
     elif args.model == 'fsrcnn':
         model = FSRCNNTrainer(args, training_data_loader, testing_data_loader)
-    elif args.model == 'drcn':
-        model = DRCNTrainer(args, training_data_loader, testing_data_loader)
     elif args.model == 'srgan':
         model = SRGANTrainer(args, training_data_loader, testing_data_loader)
-    elif args.model == 'dbpn':
-        model = DBPNTrainer(args, training_data_loader, testing_data_loader)
     else:
         raise Exception("the model does not exist")
 
