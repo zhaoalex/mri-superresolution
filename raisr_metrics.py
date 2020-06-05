@@ -16,11 +16,12 @@ def main():
     # Get image list
     hrlist = []
     srlist = []
-    for parent, dirnames, filenames in os.walk('data/test'):
+    for parent, dirnames, filenames in os.walk(os.path.join('raisr', 'results', FILTER)):
         for filename in filenames:
             if filename.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
-                hrlist.append(os.path.join(parent, filename))
-                srlist.append(os.path.join('raisr', 'results', FILTER, filename))
+                srlist.append(os.path.join(parent, filename))
+                hrlist.append(os.path.join('data', 'test', filename))
+
 
     num_images = len(hrlist)
     print('Processing {} images'.format(num_images))
