@@ -5,6 +5,7 @@ import argparse
 from torch.utils.data import DataLoader
 
 from FSRCNN.solver import FSRCNNTrainer
+from FSRCNNSEP.solver import FSRCNNSepTrainer
 from SRCNN.solver import SRCNNTrainer
 from SRGAN.solver import SRGANTrainer
 from dataset.data import get_training_set, get_test_set
@@ -43,6 +44,8 @@ def main():
         model = SRCNNTrainer(args, training_data_loader, testing_data_loader)
     elif args.model == 'fsrcnn':
         model = FSRCNNTrainer(args, training_data_loader, testing_data_loader)
+    elif args.model == 'fsrcnnsep':
+        model = FSRCNNSepTrainer(args, training_data_loader, testing_data_loader)
     elif args.model == 'srgan':
         model = SRGANTrainer(args, training_data_loader, testing_data_loader)
     else:
