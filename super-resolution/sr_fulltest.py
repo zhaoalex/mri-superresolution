@@ -63,12 +63,20 @@ all_timings = []
 all_psnr = []
 all_ssim = []
 
+upscale_factor = int(args.upscale_factor)
+
 for img_path in imagelist:
     print('Upscaling image {}'.format(img_path))
 
     hr = Image.open(img_path)
     hr_gray = hr.convert('L')
-    img = downscale(hr_gray, int(args.upscale_factor))
+
+    # make sure downscale will divide evenly
+    old_scale = hr_gray.size
+    new_scale = ((old_scale[0] // upscale_factor) * upscale_factor, (old_scale[1] // upscale_factor) * upscale_factor)
+    hr_gray = hr_gray.resize(new_scale, Image.BICUBIC)
+
+    img = downscale(hr_gray, upscale_factor)
     img = img.convert('YCbCr')
 
     y, cb, cr = img.split()

@@ -59,6 +59,11 @@ for img_path in imagelist:
     image = downscale(hr_gray, scaling_factor)
     # image = img_as_ubyte(image)
 
+    # make sure downscale will divide evenly
+    old_scale = hr_gray.shape
+    new_scale = ((old_scale[0] // scaling_factor) * scaling_factor, (old_scale[1] // scaling_factor) * scaling_factor)
+    hr_gray = transform.resize(hr_gray, new_scale)
+
     print('Upscaling image ' + str(imagecount) + ' of ' + str(len(imagelist)) + ' (' + img_path + ')')
     starttime = time.time()
 

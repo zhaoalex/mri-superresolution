@@ -16,7 +16,7 @@ from skimage import transform
 args = gettrainargs()
 
 # Define parameters
-R = 2
+R = int(args.scaling)
 patchsize = 11
 gradientsize = 9
 Qangle = 24
@@ -176,7 +176,7 @@ for pixeltype in range(0, R*R):
                 h[angle,strength,coherence,pixeltype] = cgls(Q[angle,strength,coherence,pixeltype], V[angle,strength,coherence,pixeltype])
 
 # Write filter to file
-with open("filter.p", "wb") as fp:
+with open("filters/filter{}.p".format(R), "wb") as fp:
     pickle.dump(h, fp)
 
 # Plot the learned filters
