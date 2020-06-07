@@ -19,7 +19,7 @@ class RandomDiscreteRotation:
 
 def download_bsd300(dest="./dataset"):
     # output_image_dir = join(dest, "BSDS300/images")
-    output_image_dir = join(dest, "../../data")
+    output_image_dir = join(dest, "..", "..", "data")
 
     # if not exists(output_image_dir):
     #     url = "http://www2.eecs.berkeley.edu/Research/Projects/CS/vision/bsds/BSDS300-images.tgz"
@@ -76,7 +76,7 @@ def get_training_set(upscale_factor):
 
 def get_test_set(upscale_factor):
     root_dir = download_bsd300()
-    test_dir = join(root_dir, "test")
+    test_dir = join(root_dir, "val")
     crop_size = calculate_valid_crop_size(256, upscale_factor)
 
     return DatasetFromFolder(test_dir,
