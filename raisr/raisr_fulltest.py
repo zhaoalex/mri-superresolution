@@ -139,7 +139,8 @@ for img_path in imagelist:
             # Get gradient block
             gradientblock = upscaledLR[row-gradientmargin:row+gradientmargin+1, col-gradientmargin:col+gradientmargin+1]
             # Calculate hashkey
-            angle, strength, coherence = hashkey(gradientblock, Qangle, weighting)
+            gy, gx = np.gradient(gradientblock)
+            angle, strength, coherence = hashkey(gy, gx, Qangle, weighting)
             # Get pixel type
             pixeltype = ((row-margin) % R) * R + ((col-margin) % R)
             predictHR[row-margin,col-margin] = patch.dot(h[angle,strength,coherence,pixeltype])
