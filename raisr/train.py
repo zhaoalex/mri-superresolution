@@ -111,9 +111,9 @@ for image in imagelist:
     imagecount += 1
 
 # Write Q,V to file
-with open("q.p", "wb") as fp:
+with open("filters/q{}.p".format(R), "wb") as fp:
     pickle.dump(Q, fp)
-with open("v.p", "wb") as fp:
+with open("filters/v{}.p".format(R), "wb") as fp:
     pickle.dump(V, fp)
 
 # Preprocessing permutation matrices P for nearly-free 8x more learning examples
