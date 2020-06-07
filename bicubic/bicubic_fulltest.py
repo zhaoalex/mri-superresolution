@@ -31,7 +31,7 @@ os.makedirs('lr/' + str(scaling_factor), exist_ok=True)
 downscaled_imgs = []
 
 imagelist = []
-for parent, dirnames, filenames in os.walk('../data/test'):
+for parent, dirnames, filenames in os.walk('../data/IXI-T2/test'):
     for filename in filenames:
         if filename.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
             imagelist.append(os.path.join(parent, filename))
