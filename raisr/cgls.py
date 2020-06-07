@@ -1,5 +1,7 @@
 import numpy as np
+from numba import jit
 
+@jit(nopython=True)
 def cgls(A, b):
     height, width = A.shape
     x = np.zeros((height))
