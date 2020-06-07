@@ -10,6 +10,7 @@ from SRGAN.model import Generator, Discriminator
 from progress_bar import progress_bar
 from numpy import argmax
 from shutil import copyfile
+from os import makedirs
 
 class SRGANTrainer(object):
     def __init__(self, config, training_loader, testing_loader):
@@ -35,6 +36,7 @@ class SRGANTrainer(object):
 
         self.load = config.load
         self.model_path = 'models/SRGAN/' + str(self.upscale_factor)
+        makedirs(self.model_path, exist_ok=True)
 
     def build_model(self):
         self.netG = Generator(n_residual_blocks=self.num_residuals, upsample_factor=self.upscale_factor, base_filter=64, num_channel=1).to(self.device)

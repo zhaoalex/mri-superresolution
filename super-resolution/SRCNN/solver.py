@@ -9,6 +9,7 @@ from SRCNN.model import Net
 from progress_bar import progress_bar
 from numpy import argmax
 from shutil import copyfile
+from os import makedirs
 
 class SRCNNTrainer(object):
     def __init__(self, config, training_loader, testing_loader):
@@ -28,6 +29,7 @@ class SRCNNTrainer(object):
 
         self.load = config.load
         self.model_path = 'models/SRCNN/' + str(self.upscale_factor)
+        makedirs(self.model_path, exist_ok=True)
 
     def build_model(self):
         if self.load:
