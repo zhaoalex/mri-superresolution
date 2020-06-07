@@ -75,8 +75,8 @@ for image in imagelist:
     heightgridLR = np.linspace(0,heightLR-1,heightLR)
     widthgridLR = np.linspace(0,widthLR-1,widthLR)
     bilinearinterp = interpolate.interp2d(widthgridLR, heightgridLR, grayorigin, kind='linear')
-    heightgridHR = np.linspace(0,heightLR-0.5,heightLR*2)
-    widthgridHR = np.linspace(0,widthLR-0.5,widthLR*2)
+    heightgridHR = np.linspace(0,heightLR-0.5,heightLR*R)
+    widthgridHR = np.linspace(0,widthLR-0.5,widthLR*R)
     upscaledLR = bilinearinterp(widthgridHR, heightgridHR)
     # Calculate predictHR pixels
     heightHR, widthHR = upscaledLR.shape
@@ -98,7 +98,8 @@ for image in imagelist:
             # Get gradient block
             gradientblock = upscaledLR[row-gradientmargin:row+gradientmargin+1, col-gradientmargin:col+gradientmargin+1]
             # Calculate hashkey
-            angle, strength, coherence = hashkey(gradientblock, Qangle, weighting)
+            gy, gx = np.gradient(gradientblock)
+            angle, strength, coherence = hashkey(gy, gx, Qangle, weighting)
             # Get pixel type
             pixeltype = ((row-margin) % R) * R + ((col-margin) % R)
             predictHR[row-margin,col-margin] = patch.dot(h[angle,strength,coherence,pixeltype])

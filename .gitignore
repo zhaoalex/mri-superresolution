@@ -1,3 +1,4 @@
-
+__pycache__
+*.png
 *.dcm
 data/IXI-T2.zip

@@ -16,13 +16,13 @@ from skimage import transform
 args = gettrainargs()
 
 # Define parameters
-R = 2
+R = int(args.scaling)
 patchsize = 11
 gradientsize = 9
 Qangle = 24
 Qstrength = 3
 Qcoherence = 3
-trainpath = 'train'
+trainpath = '../data/train'
 
 # Calculate the margin
 maxblocksize = max(patchsize, gradientsize)
@@ -34,6 +34,8 @@ Q = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize
 V = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
 h = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
 
+donefile = None
+
 # Read Q,V from file
 if args.qmatrix:
     with open(args.qmatrix, "rb") as fp:
@@ -41,6 +43,10 @@ if args.qmatrix:
 if args.vmatrix:
     with open(args.vmatrix, "rb") as fp:
         V = pickle.load(fp)
+
+if args.done_file:
+    with open(args.done_file, "r") as f:
+        donefile = f.read().splitlines()
 
 # Matrix preprocessing
 # Preprocessing normalized Gaussian matrix W for hashkey calculation
@@ -57,6 +63,11 @@ for parent, dirnames, filenames in os.walk(trainpath):
 # Compute Q and V
 imagecount = 1
 for image in imagelist:
+    if donefile and image in donefile:
+        print('Skipping image {}'.format(image))
+        imagecount += 1
+        continue
+
     print('\r', end='')
     print(' ' * 60, end='')
     print('\rProcessing image ' + str(imagecount) + ' of ' + str(len(imagelist)) + ' (' + image + ')')
@@ -95,7 +106,8 @@ for image in imagelist:
             # Get gradient block
             gradientblock = upscaledLR[row-gradientmargin:row+gradientmargin+1, col-gradientmargin:col+gradientmargin+1]
             # Calculate hashkey
-            angle, strength, coherence = hashkey(gradientblock, Qangle, weighting)
+            gy, gx = np.gradient(gradientblock)
+            angle, strength, coherence = hashkey(gy, gx, Qangle, weighting)
             # Get pixel type
             pixeltype = ((row-margin) % R) * R + ((col-margin) % R)
             # Get corresponding HR pixel
@@ -107,12 +119,19 @@ for image in imagelist:
             # Compute Q and V
             Q[angle,strength,coherence,pixeltype] += ATA
             V[angle,strength,coherence,pixeltype] += ATb
+    
+    if imagecount % 5 == 0:
+        print('\nWriting Q and V mid-train')
+        with open("filters/q{}.p".format(R), "w+b") as fp:
+            pickle.dump(Q, fp)
+        with open("filters/v{}.p".format(R), "w+b") as fp:
+            pickle.dump(V, fp)
     imagecount += 1
 
 # Write Q,V to file
-with open("q.p", "wb") as fp:
+with open("filters/q{}.p".format(R), "w+b") as fp:
     pickle.dump(Q, fp)
-with open("v.p", "wb") as fp:
+with open("filters/v{}.p".format(R), "w+b") as fp:
     pickle.dump(V, fp)
 
 # Preprocessing permutation matrices P for nearly-free 8x more learning examples
@@ -175,7 +194,7 @@ for pixeltype in range(0, R*R):
                 h[angle,strength,coherence,pixeltype] = cgls(Q[angle,strength,coherence,pixeltype], V[angle,strength,coherence,pixeltype])
 
 # Write filter to file
-with open("filter.p", "wb") as fp:
+with open("filters/filter{}.p".format(R), "wb") as fp:
     pickle.dump(h, fp)
 
 # Plot the learned filters

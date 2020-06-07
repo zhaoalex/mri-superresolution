@@ -17,7 +17,7 @@ import numpy as np
 # Argument settings
 # ===========================================================
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
-parser.add_argument('-s', '--scaling_factor', type=str, default='2', help='Set scaling factor')
+parser.add_argument('-s', '--upscale_factor', type=str, default='2', help='Set scaling factor')
 parser.add_argument('-i', '--input', type=str, required=False, default='../data/test', help='input directory to use')
 parser.add_argument('-m', '--model', type=str, default='FSRCNN', help='model to use')
 parser.add_argument('-w', '--write', action='store_true')
@@ -42,7 +42,7 @@ def downscale(img, scaling_factor):
 # ===========================================================
 GPU_IN_USE = torch.cuda.is_available()
 device = torch.device('cuda' if GPU_IN_USE else 'cpu')
-model = torch.load(os.path.join('models', args.model, args.scaling_factor, 'best_model.pth'), map_location=lambda storage, loc: storage)
+model = torch.load(os.path.join('models', args.model, args.upscale_factor, 'best_model.pth'), map_location=lambda storage, loc: storage)
 model = model.to(device)
 
 if GPU_IN_USE:
@@ -63,12 +63,20 @@ all_timings = []
 all_psnr = []
 all_ssim = []
 
+upscale_factor = int(args.upscale_factor)
+
 for img_path in imagelist:
     print('Upscaling image {}'.format(img_path))
 
     hr = Image.open(img_path)
     hr_gray = hr.convert('L')
-    img = downscale(hr_gray, int(args.scaling_factor))
+
+    # make sure downscale will divide evenly
+    old_scale = hr_gray.size
+    new_scale = ((old_scale[0] // upscale_factor) * upscale_factor, (old_scale[1] // upscale_factor) * upscale_factor)
+    hr_gray = hr_gray.resize(new_scale, Image.BICUBIC)
+
+    img = downscale(hr_gray, upscale_factor)
     img = img.convert('YCbCr')
 
     y, cb, cr = img.split()
