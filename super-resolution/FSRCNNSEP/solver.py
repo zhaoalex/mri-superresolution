@@ -114,3 +114,8 @@ class FSRCNNSepTrainer(object):
         print("Best epoch: model_{} with PSNR {}".format(best_epoch, all_epoch_psnrs[best_epoch - 1]))
         copyfile(self.model_path + "/model_{}.pth".format(best_epoch), self.model_path + "/best_model.pth")
 
+        with open(self.model_path + '/metrics.txt', 'w+') as metricsfile:
+            print("Saving metrics")
+            for i, psnr in enumerate(all_epoch_psnrs):
+                metricsfile.write("{},{}\n".format(i+1, psnr))
+            metricsfile.write("Best epoch: model_{} with PSNR {}\n".format(best_epoch, all_epoch_psnrs[best_epoch - 1]))
