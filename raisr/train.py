@@ -108,12 +108,19 @@ for image in imagelist:
             # Compute Q and V
             Q[angle,strength,coherence,pixeltype] += ATA
             V[angle,strength,coherence,pixeltype] += ATb
+    
+    if imagecount % 5 == 0:
+        print('\nWriting Q and V mid-train')
+        with open("filters/q{}.p".format(R), "w+b") as fp:
+            pickle.dump(Q, fp)
+        with open("filters/v{}.p".format(R), "w+b") as fp:
+            pickle.dump(V, fp)
     imagecount += 1
 
 # Write Q,V to file
-with open("filters/q{}.p".format(R), "wb") as fp:
+with open("filters/q{}.p".format(R), "w+b") as fp:
     pickle.dump(Q, fp)
-with open("filters/v{}.p".format(R), "wb") as fp:
+with open("filters/v{}.p".format(R), "w+b") as fp:
     pickle.dump(V, fp)
 
 # Preprocessing permutation matrices P for nearly-free 8x more learning examples
