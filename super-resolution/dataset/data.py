@@ -19,7 +19,7 @@ class RandomDiscreteRotation:
 
 def download_bsd300(dest="./dataset"):
     # output_image_dir = join(dest, "BSDS300/images")
-    output_image_dir = join(dest, "../../data")
+    output_image_dir = join(dest, "..", "..", "data")
 
     # if not exists(output_image_dir):
     #     url = "http://www2.eecs.berkeley.edu/Research/Projects/CS/vision/bsds/BSDS300-images.tgz"
