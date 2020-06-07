@@ -1,0 +1,2 @@
+../data/train/IXI038-Guys-0729-T2_34.png
+../data/train/IXI038-Guys-0729-T2_36.png

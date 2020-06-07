@@ -34,6 +34,8 @@ Q = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize
 V = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
 h = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
 
+donefile = None
+
 # Read Q,V from file
 if args.qmatrix:
     with open(args.qmatrix, "rb") as fp:
@@ -41,6 +43,10 @@ if args.qmatrix:
 if args.vmatrix:
     with open(args.vmatrix, "rb") as fp:
         V = pickle.load(fp)
+
+if args.done_file:
+    with open(args.done_file, "r") as f:
+        donefile = f.read().splitlines()
 
 # Matrix preprocessing
 # Preprocessing normalized Gaussian matrix W for hashkey calculation
@@ -57,6 +63,11 @@ for parent, dirnames, filenames in os.walk(trainpath):
 # Compute Q and V
 imagecount = 1
 for image in imagelist:
+    if donefile and image in donefile:
+        print('Skipping image {}'.format(image))
+        imagecount += 1
+        continue
+
     print('\r', end='')
     print(' ' * 60, end='')
     print('\rProcessing image ' + str(imagecount) + ' of ' + str(len(imagelist)) + ' (' + image + ')')
