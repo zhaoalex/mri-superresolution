@@ -11,6 +11,9 @@ def hashkey(gy, gx, Qangle, W):
     # SVD calculation
     G = np.vstack((gx,gy)).T
     GTWG = G.T.dot(W).dot(G)
+
+    GTWG = GTWG.astype(np.complex128)
+
     w, v = np.linalg.eig(GTWG);
 
     w = np.real(w)
