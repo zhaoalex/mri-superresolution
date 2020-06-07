@@ -22,7 +22,7 @@ gradientsize = 9
 Qangle = 24
 Qstrength = 3
 Qcoherence = 3
-trainpath = 'train'
+trainpath = '../data/train'
 
 # Calculate the margin
 maxblocksize = max(patchsize, gradientsize)
