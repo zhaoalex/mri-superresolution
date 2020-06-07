@@ -12,6 +12,7 @@ from skimage import transform
 from skimage import io
 from skimage import img_as_ubyte
 from skimage.color import rgb2gray
+
 import argparse
 
 parser = argparse.ArgumentParser(description='Bicubic')
@@ -35,7 +36,6 @@ def downscale(img, scaling_factor):
         height, width, third = img.shape
         size = (floor(height / scaling_factor), floor(width / scaling_factor), third)
     return transform.resize(img, size, order=3, anti_aliasing=False)
-
 
 imagelist = []
 for parent, dirnames, filenames in os.walk(args.input):
