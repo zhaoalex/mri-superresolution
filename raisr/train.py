@@ -122,19 +122,25 @@ def run():
                 imagelist.append(os.path.join(parent, filename))
 
     imagecount = 1
+    donefile = None
 
     if args.done_file:
-        with open(args.done_file, "r") as f:
-            donelist = f.read().splitlines()
+        donefile = open(args.done_file, "a+")
+        donefile.seek(0)
+        donelist = f.read().splitlines()
         imagelist = [x for x in imagelist if x not in donelist]
         imagecount += len(donelist)
+    else:
+        donefile = open('done{}.txt'.format(R), "w+")
 
     pool = multiprocessing.Pool()
-    chunk_size = max(multiprocessing.cpu_count() * 2, 20) - 1
+    chunk_size = 8 # multiprocessing.cpu_count() # max(multiprocessing.cpu_count(), 20)
     for img_chunk in chunks(imagelist, chunk_size):
         print('Processing images {}-{} of {}'.format(imagecount, min(imagecount+chunk_size, len(imagelist)), len(imagelist)))
         for imgpathname in img_chunk:
             print(imgpathname)
+            donefile.write(imgpathname + '\n')
+            donefile.flush()
 
         qvlist = pool.map(processQV, img_chunk)
         for q, v in qvlist:
@@ -151,6 +157,8 @@ def run():
 
     pool.close()
     pool.join()
+
+    donefile.close()
 
     # Write Q,V to file
     with open("filters/q{}.p".format(R), "w+b") as fp:
