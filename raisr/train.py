@@ -130,7 +130,7 @@ def run():
         imagecount += len(donelist)
 
     pool = multiprocessing.Pool()
-    chunk_size = max(multiprocessing.cpu_count() * 2, 20)
+    chunk_size = max(multiprocessing.cpu_count() * 2, 20) - 1
     for img_chunk in chunks(imagelist, chunk_size):
         print('Processing images {}-{} of {}'.format(imagecount, min(imagecount+chunk_size, len(imagelist)), len(imagelist)))
         for imgpathname in img_chunk:
