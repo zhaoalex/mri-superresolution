@@ -130,8 +130,9 @@ def run():
         imagecount += len(donelist)
 
     pool = multiprocessing.Pool()
-    for img_chunk in chunks(imagelist, 20):
-        print('Processing images {}-{} of {}'.format(imagecount, min(imagecount+20, len(imagelist)), len(imagelist)))
+    chunk_size = max(multiprocessing.cpu_count() * 2, 20)
+    for img_chunk in chunks(imagelist, chunk_size):
+        print('Processing images {}-{} of {}'.format(imagecount, min(imagecount+chunk_size, len(imagelist)), len(imagelist)))
         for imgpathname in img_chunk:
             print(imgpathname)
 
@@ -146,7 +147,7 @@ def run():
         with open("filters/v{}.p".format(R), "w+b") as fp:
             pickle.dump(V, fp)
 
-        imagecount += 20
+        imagecount += chunk_size
 
     pool.close()
     pool.join()
