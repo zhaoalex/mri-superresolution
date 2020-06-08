@@ -13,6 +13,9 @@ from matplotlib import pyplot as plt
 from scipy import interpolate
 from skimage import transform
 
+import multiprocessing
+from multiprocessing import Queue
+
 args = gettrainargs()
 
 # Define parameters
@@ -34,7 +37,7 @@ Q = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize
 V = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
 h = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
 
-donefile = None
+donelist = None
 
 # Read Q,V from file
 if args.qmatrix:
@@ -43,10 +46,6 @@ if args.qmatrix:
 if args.vmatrix:
     with open(args.vmatrix, "rb") as fp:
         V = pickle.load(fp)
-
-if args.done_file:
-    with open(args.done_file, "r") as f:
-        donefile = f.read().splitlines()
 
 # Matrix preprocessing
 # Preprocessing normalized Gaussian matrix W for hashkey calculation
@@ -60,17 +59,21 @@ for parent, dirnames, filenames in os.walk(trainpath):
         if filename.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
             imagelist.append(os.path.join(parent, filename))
 
-# Compute Q and V
 imagecount = 1
-for image in imagelist:
-    if donefile and image in donefile:
-        print('Skipping image {}'.format(image))
-        imagecount += 1
-        continue
+
+if args.done_file:
+    with open(args.done_file, "r") as f:
+        donelist = f.read().splitlines()
+    imagelist = [x for x in imagelist if x not in donelist]
+    imagecount += len(donelist)
+
+def processQV(image):
+    Q = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize*patchsize))
+    V = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
 
     print('\r', end='')
     print(' ' * 60, end='')
-    print('\rProcessing image ' + str(imagecount) + ' of ' + str(len(imagelist)) + ' (' + image + ')')
+    print('\rProcessing image ' + image)
     origin = cv2.imread(image)
     # Extract only the luminance in YCbCr
     grayorigin = cv2.cvtColor(origin, cv2.COLOR_BGR2YCrCb)[:,:,0]
@@ -120,13 +123,31 @@ for image in imagelist:
             Q[angle,strength,coherence,pixeltype] += ATA
             V[angle,strength,coherence,pixeltype] += ATb
     
-    if imagecount % 5 == 0:
-        print('\nWriting Q and V mid-train')
-        with open("filters/q{}.p".format(R), "w+b") as fp:
-            pickle.dump(Q, fp)
-        with open("filters/v{}.p".format(R), "w+b") as fp:
-            pickle.dump(V, fp)
-    imagecount += 1
+    return Q, V
+
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+pool = multiprocessing.Pool()
+for img_chunk in chunks(imagelist, 20):
+    print('Processing images {}-{} of {}'.format(imagecount, min(imagecount+20, len(imagelist)), len(imagelist)))
+
+    qvlist = pool.map(processQV, img_chunk)
+    for q, v in qvlist:
+        Q = np.add(Q, q)
+        V = np.add(V, v)
+
+    print('\nWriting Q and V mid-train')
+    with open("filters/q{}.p".format(R), "w+b") as fp:
+        pickle.dump(Q, fp)
+    with open("filters/v{}.p".format(R), "w+b") as fp:
+        pickle.dump(V, fp)
+
+    imagecount += 20
+
+pool.close()
+pool.join()
 
 # Write Q,V to file
 with open("filters/q{}.p".format(R), "w+b") as fp:
