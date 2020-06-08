@@ -47,7 +47,7 @@ def processQV(image):
 
     print('\r', end='')
     print(' ' * 60, end='')
-    print('\rProcessing image ' + image)
+    print('\rProcessing new image')
     origin = cv2.imread(image)
     # Extract only the luminance in YCbCr
     grayorigin = cv2.cvtColor(origin, cv2.COLOR_BGR2YCrCb)[:,:,0]
@@ -132,6 +132,8 @@ def run():
     pool = multiprocessing.Pool()
     for img_chunk in chunks(imagelist, 20):
         print('Processing images {}-{} of {}'.format(imagecount, min(imagecount+20, len(imagelist)), len(imagelist)))
+        for imgpathname in img_chunk:
+            print(imgpathname)
 
         qvlist = pool.map(processQV, img_chunk)
         for q, v in qvlist:
