@@ -14,7 +14,6 @@ from scipy import interpolate
 from skimage import transform
 
 import multiprocessing
-from multiprocessing import Queue
 
 args = gettrainargs()
 
