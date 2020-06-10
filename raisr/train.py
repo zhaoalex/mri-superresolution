@@ -32,39 +32,14 @@ margin = floor(maxblocksize/2)
 patchmargin = floor(patchsize/2)
 gradientmargin = floor(gradientsize/2)
 
-Q = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize*patchsize))
-V = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
-h = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
-
-donelist = None
-
-# Read Q,V from file
-if args.qmatrix:
-    with open(args.qmatrix, "rb") as fp:
-        Q = pickle.load(fp)
-if args.vmatrix:
-    with open(args.vmatrix, "rb") as fp:
-        V = pickle.load(fp)
-
 # Matrix preprocessing
 # Preprocessing normalized Gaussian matrix W for hashkey calculation
 weighting = gaussian2d([gradientsize, gradientsize], 2)
 weighting = np.diag(weighting.ravel())
 
-# Get image list
-imagelist = []
-for parent, dirnames, filenames in os.walk(trainpath):
-    for filename in filenames:
-        if filename.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
-            imagelist.append(os.path.join(parent, filename))
-
-imagecount = 1
-
-if args.done_file:
-    with open(args.done_file, "r") as f:
-        donelist = f.read().splitlines()
-    imagelist = [x for x in imagelist if x not in donelist]
-    imagecount += len(donelist)
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 def processQV(image):
     Q = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize*patchsize))
@@ -72,7 +47,7 @@ def processQV(image):
 
     print('\r', end='')
     print(' ' * 60, end='')
-    print('\rProcessing image ' + image)
+    print('\rProcessing new image')
     origin = cv2.imread(image)
     # Extract only the luminance in YCbCr
     grayorigin = cv2.cvtColor(origin, cv2.COLOR_BGR2YCrCb)[:,:,0]
@@ -124,103 +99,143 @@ def processQV(image):
     
     return Q, V
 
-def chunks(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
+def run():
+    Q = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize*patchsize))
+    V = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
+    h = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
 
-pool = multiprocessing.Pool()
-for img_chunk in chunks(imagelist, 20):
-    print('Processing images {}-{} of {}'.format(imagecount, min(imagecount+20, len(imagelist)), len(imagelist)))
+    donelist = None
 
-    qvlist = pool.map(processQV, img_chunk)
-    for q, v in qvlist:
-        Q = np.add(Q, q)
-        V = np.add(V, v)
+    # Read Q,V from file
+    if args.qmatrix:
+        with open(args.qmatrix, "rb") as fp:
+            Q = pickle.load(fp)
+    if args.vmatrix:
+        with open(args.vmatrix, "rb") as fp:
+            V = pickle.load(fp)
 
-    print('\nWriting Q and V mid-train')
+    # Get image list
+    imagelist = []
+    for parent, dirnames, filenames in os.walk(trainpath):
+        for filename in filenames:
+            if filename.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
+                imagelist.append(os.path.join(parent, filename))
+
+    imagecount = 1
+    donefile = None
+
+    if args.done_file:
+        donefile = open(args.done_file, "a+")
+        donefile.seek(0)
+        donelist = f.read().splitlines()
+        imagelist = [x for x in imagelist if x not in donelist]
+        imagecount += len(donelist)
+    else:
+        donefile = open('done{}.txt'.format(R), "w+")
+
+    pool = multiprocessing.Pool()
+    chunk_size = 8 # multiprocessing.cpu_count() # max(multiprocessing.cpu_count(), 20)
+    for img_chunk in chunks(imagelist, chunk_size):
+        print('Processing images {}-{} of {}'.format(imagecount, min(imagecount+chunk_size, len(imagelist)), len(imagelist)))
+        for imgpathname in img_chunk:
+            print(imgpathname)
+            donefile.write(imgpathname + '\n')
+            donefile.flush()
+
+        qvlist = pool.map(processQV, img_chunk)
+        for q, v in qvlist:
+            Q = np.add(Q, q)
+            V = np.add(V, v)
+
+        print('\nWriting Q and V mid-train')
+        with open("filters/q{}.p".format(R), "w+b") as fp:
+            pickle.dump(Q, fp)
+        with open("filters/v{}.p".format(R), "w+b") as fp:
+            pickle.dump(V, fp)
+
+        imagecount += chunk_size
+
+    pool.close()
+    pool.join()
+
+    donefile.close()
+
+    # Write Q,V to file
     with open("filters/q{}.p".format(R), "w+b") as fp:
         pickle.dump(Q, fp)
     with open("filters/v{}.p".format(R), "w+b") as fp:
         pickle.dump(V, fp)
 
-    imagecount += 20
+    # Preprocessing permutation matrices P for nearly-free 8x more learning examples
+    print('\r', end='')
+    print(' ' * 60, end='')
+    print('\rPreprocessing permutation matrices P for nearly-free 8x more learning examples ...')
+    sys.stdout.flush()
+    P = np.zeros((patchsize*patchsize, patchsize*patchsize, 7))
+    rotate = np.zeros((patchsize*patchsize, patchsize*patchsize))
+    flip = np.zeros((patchsize*patchsize, patchsize*patchsize))
+    for i in range(0, patchsize*patchsize):
+        i1 = i % patchsize
+        i2 = floor(i / patchsize)
+        j = patchsize * patchsize - patchsize + i2 - patchsize * i1
+        rotate[j,i] = 1
+        k = patchsize * (i2 + 1) - i1 - 1
+        flip[k,i] = 1
+    for i in range(1, 8):
+        i1 = i % 4
+        i2 = floor(i / 4)
+        P[:,:,i-1] = np.linalg.matrix_power(flip,i2).dot(np.linalg.matrix_power(rotate,i1))
+    Qextended = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize*patchsize))
+    Vextended = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
+    for pixeltype in range(0, R*R):
+        for angle in range(0, Qangle):
+            for strength in range(0, Qstrength):
+                for coherence in range(0, Qcoherence):
+                    for m in range(1, 8):
+                        m1 = m % 4
+                        m2 = floor(m / 4)
+                        newangleslot = angle
+                        if m2 == 1:
+                            newangleslot = Qangle-angle-1
+                        newangleslot = int(newangleslot-Qangle/2*m1)
+                        while newangleslot < 0:
+                            newangleslot += Qangle
+                        newQ = P[:,:,m-1].T.dot(Q[angle,strength,coherence,pixeltype]).dot(P[:,:,m-1])
+                        newV = P[:,:,m-1].T.dot(V[angle,strength,coherence,pixeltype])
+                        Qextended[newangleslot,strength,coherence,pixeltype] += newQ
+                        Vextended[newangleslot,strength,coherence,pixeltype] += newV
+    Q += Qextended
+    V += Vextended
 
-pool.close()
-pool.join()
+    # Compute filter h
+    print('Computing h ...')
+    sys.stdout.flush()
+    operationcount = 0
+    totaloperations = R * R * Qangle * Qstrength * Qcoherence
+    for pixeltype in range(0, R*R):
+        for angle in range(0, Qangle):
+            for strength in range(0, Qstrength):
+                for coherence in range(0, Qcoherence):
+                    if round(operationcount*100/totaloperations) != round((operationcount+1)*100/totaloperations):
+                        print('\r|', end='')
+                        print('#' * round((operationcount+1)*100/totaloperations/2), end='')
+                        print(' ' * (50 - round((operationcount+1)*100/totaloperations/2)), end='')
+                        print('|  ' + str(round((operationcount+1)*100/totaloperations)) + '%', end='')
+                        sys.stdout.flush()
+                    operationcount += 1
+                    h[angle,strength,coherence,pixeltype] = cgls(Q[angle,strength,coherence,pixeltype], V[angle,strength,coherence,pixeltype])
 
-# Write Q,V to file
-with open("filters/q{}.p".format(R), "w+b") as fp:
-    pickle.dump(Q, fp)
-with open("filters/v{}.p".format(R), "w+b") as fp:
-    pickle.dump(V, fp)
+    # Write filter to file
+    with open("filters/filter{}.p".format(R), "wb") as fp:
+        pickle.dump(h, fp)
 
-# Preprocessing permutation matrices P for nearly-free 8x more learning examples
-print('\r', end='')
-print(' ' * 60, end='')
-print('\rPreprocessing permutation matrices P for nearly-free 8x more learning examples ...')
-sys.stdout.flush()
-P = np.zeros((patchsize*patchsize, patchsize*patchsize, 7))
-rotate = np.zeros((patchsize*patchsize, patchsize*patchsize))
-flip = np.zeros((patchsize*patchsize, patchsize*patchsize))
-for i in range(0, patchsize*patchsize):
-    i1 = i % patchsize
-    i2 = floor(i / patchsize)
-    j = patchsize * patchsize - patchsize + i2 - patchsize * i1
-    rotate[j,i] = 1
-    k = patchsize * (i2 + 1) - i1 - 1
-    flip[k,i] = 1
-for i in range(1, 8):
-    i1 = i % 4
-    i2 = floor(i / 4)
-    P[:,:,i-1] = np.linalg.matrix_power(flip,i2).dot(np.linalg.matrix_power(rotate,i1))
-Qextended = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize, patchsize*patchsize))
-Vextended = np.zeros((Qangle, Qstrength, Qcoherence, R*R, patchsize*patchsize))
-for pixeltype in range(0, R*R):
-    for angle in range(0, Qangle):
-        for strength in range(0, Qstrength):
-            for coherence in range(0, Qcoherence):
-                for m in range(1, 8):
-                    m1 = m % 4
-                    m2 = floor(m / 4)
-                    newangleslot = angle
-                    if m2 == 1:
-                        newangleslot = Qangle-angle-1
-                    newangleslot = int(newangleslot-Qangle/2*m1)
-                    while newangleslot < 0:
-                        newangleslot += Qangle
-                    newQ = P[:,:,m-1].T.dot(Q[angle,strength,coherence,pixeltype]).dot(P[:,:,m-1])
-                    newV = P[:,:,m-1].T.dot(V[angle,strength,coherence,pixeltype])
-                    Qextended[newangleslot,strength,coherence,pixeltype] += newQ
-                    Vextended[newangleslot,strength,coherence,pixeltype] += newV
-Q += Qextended
-V += Vextended
+    # Plot the learned filters
+    if args.plot:
+        filterplot(h, R, Qangle, Qstrength, Qcoherence, patchsize)
 
-# Compute filter h
-print('Computing h ...')
-sys.stdout.flush()
-operationcount = 0
-totaloperations = R * R * Qangle * Qstrength * Qcoherence
-for pixeltype in range(0, R*R):
-    for angle in range(0, Qangle):
-        for strength in range(0, Qstrength):
-            for coherence in range(0, Qcoherence):
-                if round(operationcount*100/totaloperations) != round((operationcount+1)*100/totaloperations):
-                    print('\r|', end='')
-                    print('#' * round((operationcount+1)*100/totaloperations/2), end='')
-                    print(' ' * (50 - round((operationcount+1)*100/totaloperations/2)), end='')
-                    print('|  ' + str(round((operationcount+1)*100/totaloperations)) + '%', end='')
-                    sys.stdout.flush()
-                operationcount += 1
-                h[angle,strength,coherence,pixeltype] = cgls(Q[angle,strength,coherence,pixeltype], V[angle,strength,coherence,pixeltype])
+    print('\r', end='')
+    print(' ' * 60, end='')
+    print('\rFinished.')
 
-# Write filter to file
-with open("filters/filter{}.p".format(R), "wb") as fp:
-    pickle.dump(h, fp)
-
-# Plot the learned filters
-if args.plot:
-    filterplot(h, R, Qangle, Qstrength, Qcoherence, patchsize)
-
-print('\r', end='')
-print(' ' * 60, end='')
-print('\rFinished.')
+if __name__ == '__main__':
+    run()
