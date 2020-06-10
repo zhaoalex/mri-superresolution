@@ -47,7 +47,7 @@ class FSRCNNSepTrainer(object):
             for param in child.parameters():
                 param.requires_grad = False
         
-        self.model.last_part = nn.ConvTranspose2d(in_channels=self.model.first_part[0].out_channels, out_channels=self.model.first_part[0].in_channels, kernel_size=9, stride=self.upscale_factor, padding=4, output_padding=self.upscale_factor-1)
+        self.model.last_part = nn.ConvTranspose2d(in_channels=self.model.first_part[0].out_channels, out_channels=self.model.first_part[0].in_channels, kernel_size=9, stride=self.upscale_factor, padding=4, output_padding=self.upscale_factor-1).cuda()
         for param in self.model.last_part.parameters():
             param.requires_grad = True
 
