@@ -15,6 +15,7 @@ from skimage import transform
 from skimage import io
 from skimage import img_as_ubyte
 from skimage.color import rgb2gray
+import re
 
 def mprint(out):
     print(out)
@@ -32,8 +33,8 @@ def downscale(img, scaling_factor):
 args = gettestargs()
 
 scaling_factor = int(args.scaling)
-os.makedirs('lr/' + str(scaling_factor), exist_ok=True)
-downscaled_imgs = []
+# os.makedirs('lr/' + str(scaling_factor), exist_ok=True)
+# downscaled_imgs = []
 
 imagelist = []
 for parent, dirnames, filenames in os.walk('../data/test'):
@@ -41,12 +42,12 @@ for parent, dirnames, filenames in os.walk('../data/test'):
         if filename.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
             imagelist.append(os.path.join(parent, filename))
 
-for img_path in imagelist:
-    # print('Reading {}'.format(img_path))
-    image = io.imread(img_path)
-    image = rgb2gray(image)
-    downscaled = downscale(image, scaling_factor)
-    downscaled_imgs.append(img_as_ubyte(downscaled))
+# for img_path in imagelist:
+#     # print('Reading {}'.format(img_path))
+#     image = io.imread(img_path)
+#     image = rgb2gray(image)
+#     downscaled = downscale(image, scaling_factor)
+#     downscaled_imgs.append(img_as_ubyte(downscaled))
 
 # Define parameters
 R = scaling_factor
@@ -75,21 +76,32 @@ with open(filtername, "rb") as fp:
 weighting = gaussian2d([gradientsize, gradientsize], 2)
 weighting = np.diag(weighting.ravel())
 
-# # Get image list
-# imagelist = []
-# for parent, dirnames, filenames in os.walk(trainpath):
-#     for filename in filenames:
-#         if filename.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
-#             imagelist.append(os.path.join(parent, filename))
+all_timings = []
+all_psnr = []
+all_ssim = []
 
 # record metrics
 metricspath = 'results/{}/metrics.txt'.format(os.path.basename(filtername))
 os.makedirs(os.path.dirname(metricspath), exist_ok=True)
-metrics = open(metricspath, 'w+')
+if args.resume:
+    seenfiles = []
+    reg = re.compile(r'^(.*): PSNR (.*), SSIM (.*)$')
+    metrics = open(metricspath, 'a+')
+    metrics.seek(0)
+    while True:
+        line1 = metrics.readline()
+        line2 = metrics.readline()
+        if not line2: break
 
-all_timings = []
-all_psnr = []
-all_ssim = []
+        all_timings.append(float(line1))
+        info = reg.match(line2).groups()
+        seenfiles.append(info[0])
+        all_psnr.append(float(info[1]))
+        all_ssim.append(float(info[2]))
+
+    imagelist = [x for x in imagelist if os.path.basename(x) not in seenfiles]
+else:
+    metrics = open(metricspath, 'w+')
 
 imagecount = 1
 for img_path in imagelist:
