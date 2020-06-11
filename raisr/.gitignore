@@ -1,6 +1,5 @@
 train/*
 test/*
-results/*
 __pycache__
 
 # Except these files...
