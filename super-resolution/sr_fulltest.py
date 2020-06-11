@@ -65,8 +65,9 @@ all_ssim = []
 
 upscale_factor = int(args.upscale_factor)
 
+imagecount = 1
 for img_path in imagelist:
-    print('Upscaling image {}'.format(img_path))
+    print('Upscaling image {} of {} ({})'.format(imagecount, len(imagelist), img_path))
 
     hr = Image.open(img_path)
     hr_gray = hr.convert('L')
@@ -119,6 +120,8 @@ for img_path in imagelist:
         out_path = 'results/{}/'.format(args.model) + os.path.splitext(os.path.basename(img_path))[0] + '.png'
         out_img.save(out_path)
         print('output image saved to ', out_path)
+    
+    imagecount += 1
 
 mprint('')
 mprint('Avg PSNR: {}'.format(np.mean(all_psnr)))
