@@ -55,7 +55,7 @@ for parent, dirnames, filenames in os.walk(args.input):
             imagelist.append(os.path.join(parent, filename))
 
 # record metrics
-metricspath = 'results/{}/metrics.txt'.format(args.model)
+metricspath = 'results/{}/{}/metrics.txt'.format(args.model, args.upscale_factor)
 os.makedirs(os.path.dirname(metricspath), exist_ok=True)
 metrics = open(metricspath, 'w+')
 
@@ -117,7 +117,7 @@ for img_path in imagelist:
     all_timings.append(timedelta)
     
     if args.write:
-        out_path = 'results/{}/'.format(args.model) + os.path.splitext(os.path.basename(img_path))[0] + '.png'
+        out_path = 'results/{}/{}/'.format(args.model, args.upscale_factor) + os.path.splitext(os.path.basename(img_path))[0] + '.png'
         out_img.save(out_path)
         print('output image saved to ', out_path)
     
