@@ -83,6 +83,9 @@ class SRGANTrainer(object):
             loss.backward()
             self.optimizerG.step()
 
+            progress_bar(batch_num, len(self.training_loader), 'Loss: %.4f' % (loss / (batch_num + 1)))
+
+
     def train(self):
         # models setup
         self.netG.train()
@@ -143,6 +146,7 @@ class SRGANTrainer(object):
         self.build_model()
         all_epoch_psnrs = []
         for epoch in range(1, self.epoch_pretrain + 1):
+            print("\n===> Pretrain epoch {} starts:".format(epoch))
             self.pretrain()
             print("{}/{} pretrained".format(epoch, self.epoch_pretrain))
 

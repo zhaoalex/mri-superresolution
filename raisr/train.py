@@ -127,7 +127,7 @@ def run():
     if args.done_file:
         donefile = open(args.done_file, "a+")
         donefile.seek(0)
-        donelist = f.read().splitlines()
+        donelist = donefile.read().splitlines()
         imagelist = [x for x in imagelist if x not in donelist]
         imagecount += len(donelist)
     else:
