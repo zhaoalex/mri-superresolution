@@ -1,4 +1,5 @@
 __pycache__
 *.png
+!paper.png
 *.dcm
 data/IXI-T2.zip
